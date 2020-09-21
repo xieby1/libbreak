@@ -21,8 +21,20 @@ ADDR next_pc(ADDR);
 int insert_break(ADDR);
 
 /*
+ * @param[in] insert a break instruction at next inst of ADDR
+ * @param[out] 0 success, others fail
+ */
+int insert_break_next(ADDR);
+
+/*
  * @param[in] remove the break instruction at ADDR
  * @param[out] 0 success, other fail
  */
 int remove_break(ADDR);
+
+/*
+ * @param[in] check whether ADDR is a break trigger
+ * @param[out] none-zero: yes it is a break, zero: no it is not a break
+ */
+int hit_a_break(ADDR);
 #endif
