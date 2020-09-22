@@ -1,7 +1,14 @@
+# generated files
 .clangd/
-
 compile_commands.json
 
-*.swp
+# binary files
+test/*
+!test/*.c
+!test/Makefile
 *.a
+*.so
+
+# temporary files
+*.swp
 *.o

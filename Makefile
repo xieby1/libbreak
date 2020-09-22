@@ -1,25 +1,28 @@
-CPU := $(shell uname -m)
-ARCH_DEP_SRC := arch/mips/
-CC := gcc
-CFLAGS := -Iinclude/ -g
-SRC := break
+include common.mk
 
-all: test
+ARCH_DEP_SRC := arch/mips
+CFLAGS_LIBBREAK = -Iinclude
 
-TEST_SRC := $(wildcard test/*.c)
-TEST_PROGS := $(patsubst %.c, %, ${TEST_SRC})
-test: ${TEST_PROGS}
+all: test libbreak.a capstone
 
-test/%: test/%.c lib${SRC}.a
-	${CC} $< ${CFLAGS} -L. -lbreak -o $@
+test: FORCE libbreak.a capstone
+	${MAKE} -C test/
 
-lib${SRC}.a: ${ARCH_DEP_SRC}${SRC}.o
-	ar rcs $@ $?
+libbreak.a: ${ARCH_DEP_SRC}/break.o
+	ar rcs $@ $<
 
-${ARCH_DEP_SRC}%.o: ${ARCH_DEP_SRC}%.c
-	${CC} -c ${CFLAGS} -o $@ $<
+${ARCH_DEP_SRC}/break.o: ${ARCH_DEP_SRC}/break.c
+	${CC} -c ${CFLAGS} ${CFLAGS_LIBBREAK} -o $@ $<
 
-clean:
-	rm lib${SRC}.a
-	rm ${ARCH_DEP_SRC}*.o
-	rm ${TEST_PROGS}
+capstone: FORCE
+	CAPSTONE_STATIC=yes ${MAKE} -C capstone/
+
+clean: FORCE clean-local
+	${MAKE} clean -C capstone/
+
+clean-local: FORCE
+	rm -f libbreak.a
+	rm -f ${ARCH_DEP_SRC}/*.o
+	${MAKE} clean -C test/
+
+FORCE:
