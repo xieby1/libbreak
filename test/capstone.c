@@ -1,3 +1,6 @@
+// Expected output:
+// 0x1359:	push		rbp
+// 0x135a:	mov		rax, qword ptr [rip + 0x13b8]
 #include "capstone/capstone.h"
 
 #include <assert.h> /* assert */

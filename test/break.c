@@ -38,7 +38,7 @@ static void handler(int sig, siginfo_t *info, void *ucontext)
     else
     { /* prologue */
         mprotect(page, size, PROTS);
-        insert_break_next(pc);
+        insert_break_next(ucontext);
         printf("insert next_");
     }
     printf("break at %lx\n", pc);

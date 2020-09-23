@@ -1,7 +1,9 @@
 include common.mk
 
 ARCH_DEP_SRC := arch/mips
-CFLAGS_LIBBREAK = -Iinclude
+# TODO: include libcapstone.a into libbreak.a, 
+# so that no need explicitly link against libcapstone.a
+CFLAGS_LIBBREAK = -Iinclude -Icapstone/include -Lcapstone -lcapstone
 
 all: test libbreak.a capstone
 
@@ -11,7 +13,7 @@ test: FORCE libbreak.a capstone
 libbreak.a: ${ARCH_DEP_SRC}/break.o
 	ar rcs $@ $<
 
-${ARCH_DEP_SRC}/break.o: ${ARCH_DEP_SRC}/break.c
+${ARCH_DEP_SRC}/break.o: ${ARCH_DEP_SRC}/break.c include/break.h include/util.h
 	${CC} -c ${CFLAGS} ${CFLAGS_LIBBREAK} -o $@ $<
 
 capstone: FORCE

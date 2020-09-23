@@ -1,5 +1,8 @@
 #include "break.h"
+#include "util.h" /* VERBOSE_OUTPUT*/
+#include "capstone/capstone.h"
 
+#include <assert.h>   /* assert */
 #include <stdint.h>   /* uint32_t */
 #include <stdio.h>    /* perror */
 #include <sys/mman.h> /* mprotect */
@@ -18,13 +21,16 @@ typedef struct BreakInfo
     MIPSInst inst_buf;
     MIPSInst *inst_addr;
     /* for branch target */
+    bool delayed_slot;
     MIPSInst inst_buf2;
     MIPSInst *inst_addr2;
 } BreakInfo;
 
+/* global variables */
 int page_size;
 ADDR page_mask;
 static BreakInfo bi = {0};
+csh cshandle;
 
 static inline int hit_a_break_MIPSInst(MIPSInst *cp)
 {
@@ -38,11 +44,74 @@ void __attribute__((constructor)) libbreak_init(void)
 {
     page_size = getpagesize();
     page_mask = ~((unsigned long)page_size - 1);
+    cs_err ret = cs_open(CS_ARCH_MIPS, CS_MODE_MIPS64, &cshandle);
+    assert(ret == CS_ERR_OK);
+    ret = cs_option(cshandle, CS_OPT_DETAIL, CS_OPT_ON);
+    assert(ret == CS_ERR_OK);
 }
 
-int insert_break_next(ADDR a)
+void __attribute__((destructor)) libbreak_exit(void) { cs_close(&cshandle); }
+
+/* return the value of @i-th genral reg oprand in @insn */
+static inline greg_t greg_value(ucontext_t *ucp, cs_insn *insn, int i)
 {
-    MIPSInst *np = (MIPSInst *)next_pc(a);
+    cs_mips_op operand = insn->detail->mips.operands[i];
+    assert(operand.type == MIPS_OP_REG);
+    greg_t v = ucp->uc_mcontext.gregs[operand.reg - MIPS_REG_0];
+    return v;
+}
+
+static inline int64_t imm_value(cs_insn *insn, int i)
+{
+    cs_mips_op operand = insn->detail->mips.operands[i];
+    assert(operand.type == MIPS_OP_IMM);
+    return operand.imm;
+}
+
+int insert_break_next(ucontext_t *ucp)
+{
+    /* MIPS delayed slot */
+    /*
+     * +---------------+
+     * |0branch        +---------------+
+     * +---------------+       +------ | -----+
+     * |1delayed_slot  |       |4temp  |      |
+     * +---------------+       +-------V------+
+     * |2next(not jump)|       |3next(jump)   |
+     * +---------------+       +--------------+
+     */
+    ADDR pc = ucp->uc_mcontext.pc; /* pc points at 0branch */
+    cs_insn *insn;
+    size_t count = cs_disasm(cshandle, (uint8_t *)pc, 4, pc, 1, &insn);
+    assert(count == 1);
+    if (cs_insn_group(cshandle, insn, MIPS_GRP_JUMP))
+    {
+        // bi.delayed_slot = true;
+        switch (insn->id)
+        {
+            case MIPS_INS_BEQ:
+            {
+                greg_t rs = greg_value(ucp, insn, 0);
+                greg_t rt = greg_value(ucp, insn, 1);
+                int64_t offset = imm_value(insn, 2);
+                if (rs == rt)
+                {
+                    pc += offset * 4; /* pc points at 4temp */
+                }
+                else
+                {
+                    pc = next_pc(pc); /* pc points at 1delayed_slot */
+                }
+            }
+            break;
+            default:
+                assert(0);
+                break;
+        }
+    }
+
+    MIPSInst *np = (MIPSInst *)next_pc(pc);
+    LIBBREAK_VERBOSE_OUTPUT("insert break at %p\n", np);
     int ret = mprotect((void *)((ADDR)np & page_mask), page_size,
                        PROT_READ | PROT_WRITE | PROT_EXEC);
     if (ret == -1)
