@@ -1,9 +1,7 @@
 include common.mk
 
 ARCH_DEP_SRC := arch/mips
-# TODO: include libcapstone.a into libbreak.a, 
-# so that no need explicitly link against libcapstone.a
-CFLAGS_LIBBREAK = -Iinclude -Icapstone/include -Lcapstone -lcapstone
+CFLAGS_LIBBREAK = -Iinclude -Icapstone/include
 
 all: test libbreak.a capstone
 

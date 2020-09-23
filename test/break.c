@@ -67,9 +67,27 @@ void __attribute__((constructor)) init_break_mips(void)
 
 int main(void)
 {
+    /* a trivial break */
     *(int *)page = 1337;
+    printf("%d\n", *(int *)page); /* Expected output: 1337 */
 
-    printf("%d\n", *(int *)page);
-
+    /* a break after delayed slot */
+#ifdef __mips__
+    asm volatile(
+        ".set noreorder\n\t"
+        "beq $v0, $v0, TAKEN\n\t"
+        "sd $zero, 0(%0)\n\t" /* explicit delayed slot, trigger sigsegv */
+        ".set reorder\n\t"
+        "NOT_TAKEN:\n\t"
+        "nop\n\t"
+        "j END\n\t"
+        "TAKEN:\n\t"
+        "nop\n\t"
+        "END:\n\t"
+        :           /* output */
+        : "r"(page) /* input */
+    );
+#endif
+    printf("%lx\n", *(long *)page); /* Expected output: 0 */
     return 0;
 }

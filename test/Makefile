@@ -3,7 +3,9 @@ include ../common.mk
 SRC := $(wildcard *.c)
 # OBJS := $(patsubst %.c, %.o, ${SRC})
 PROGS := $(patsubst %.c, %, ${SRC})
-CFLAGS_LIBBREAK = -I../include -L.. -lbreak
+# TODO: include libcapstone.a into libbreak.a,
+# so that no need explicitly link against libcapstone.a
+CFLAGS_LIBBREAK = -I../include -L.. -lbreak -L../capstone -lcapstone
 CFLAGS_CAPSTONE = -I../capstone/include -L../capstone -lcapstone
 
 all: ${PROGS}

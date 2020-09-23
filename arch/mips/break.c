@@ -1,6 +1,6 @@
 #include "break.h"
-#include "util.h" /* VERBOSE_OUTPUT*/
 #include "capstone/capstone.h"
+#include "util.h" /* VERBOSE_OUTPUT*/
 
 #include <assert.h>   /* assert */
 #include <stdint.h>   /* uint32_t */
@@ -81,6 +81,7 @@ int insert_break_next(ucontext_t *ucp)
      * +---------------+       +--------------+
      */
     ADDR pc = ucp->uc_mcontext.pc; /* pc points at 0branch */
+    ADDR npc = pc;                 /* next pc */
     cs_insn *insn;
     size_t count = cs_disasm(cshandle, (uint8_t *)pc, 4, pc, 1, &insn);
     assert(count == 1);
@@ -93,32 +94,38 @@ int insert_break_next(ucontext_t *ucp)
             {
                 greg_t rs = greg_value(ucp, insn, 0);
                 greg_t rt = greg_value(ucp, insn, 1);
-                int64_t offset = imm_value(insn, 2);
+                int64_t target_pc = imm_value(insn, 2);
                 if (rs == rt)
                 {
-                    pc += offset * 4; /* pc points at 4temp */
+                    npc = target_pc; /* npc points at 3next */
                 }
                 else
                 {
-                    pc = next_pc(pc); /* pc points at 1delayed_slot */
+                    npc += 8; /* npc points at 2next */
                 }
             }
             break;
             default:
+                printf("0x%" PRIx64 ":\t%s\t\t%s\n", insn->address,
+                       insn->mnemonic, insn->op_str);
                 assert(0);
                 break;
         }
     }
+    else
+    {
+        npc += 4;
+    }
+    cs_free(insn, 1);
 
-    MIPSInst *np = (MIPSInst *)next_pc(pc);
-    LIBBREAK_VERBOSE_OUTPUT("insert break at %p\n", np);
-    int ret = mprotect((void *)((ADDR)np & page_mask), page_size,
+    LIBBREAK_VERBOSE_OUTPUT("insert break at %p\n", (MIPSInst *)npc);
+    int ret = mprotect((void *)(npc & page_mask), page_size,
                        PROT_READ | PROT_WRITE | PROT_EXEC);
     if (ret == -1)
         perror("mprotect");
-    bi.inst_buf = *np;
-    *np = SIGSEGV_TRIGGER;
-    bi.inst_addr = np;
+    bi.inst_buf = *(MIPSInst *)npc;
+    *(MIPSInst *)npc = SIGSEGV_TRIGGER;
+    bi.inst_addr = (MIPSInst *)npc;
 
     return 0;
 }
