@@ -1,6 +1,8 @@
 #ifndef LIBBREAK_BREAK_H
 #define LIBBREAK_BREAK_H
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+#    define _GNU_SOURCE
+#endif
 #include <ucontext.h>
 typedef unsigned long ADDR;
 

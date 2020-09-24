@@ -1,7 +1,5 @@
 #include "break.h"
 
-#define _GNU_SOURCE
-
 #include <signal.h>   /* sigaction */
 #include <stdio.h>    /* perror, printf */
 #include <stdlib.h>   /* abort */
