@@ -1,3 +1,3 @@
 CC = gcc
-CFLAGS = -g
+CFLAGS = -g -Werror -Wunused -std=gnu11
 

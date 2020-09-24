@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# variables 
+TMPDIR=/tmp/libbreak_config
+CONFIGMK=config.mk
+
+# prologue
+mkdir -p ${TMPDIR}
+rm -f ${CONFIGMK}
+
+# get current arch
+## variables
+PDMCR=${TMPDIR}/predefined_macro.h
+touch ${TMPDIR}/foo.h
+cpp -dM ${TMPDIR}/foo.h > ${PDMCR}
+if [[ -n $(cat ${PDMCR} | grep __x86_64__) ]]; then
+    ARCH=x86_64
+elif [[ -n $(cat ${PDMCR} | grep __mips__) ]]; then
+    ARCH=mips
+else
+    echo "arch unknown"
+    exit -1
+fi
+unset PDMCR
+
+# output to config.mk
+append_to_config_mk() {
+    echo $1
+    echo $1 >> ${CONFIGMK}
+}
+append_to_config_mk "ARCH = ${ARCH}"
+
+# epilogue
+rm -rf ${TMPDIR}

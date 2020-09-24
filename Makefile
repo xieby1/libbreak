@@ -1,6 +1,7 @@
 include common.mk
+include config.mk
 
-ARCH_DEP_SRC := arch/mips
+ARCH_DEP_SRC := arch/${ARCH}
 CFLAGS_LIBBREAK = -Iinclude -Icapstone/include
 
 all: test libbreak.a capstone

@@ -1,6 +1,9 @@
 # generated files
+## general
 .clangd/
 compile_commands.json
+## compilation related
+config.mk
 
 # binary files
 test/*
