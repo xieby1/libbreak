@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# functions
+warning() {
+    echo -e "\033[31mWARNING:\033[m $1"
+}
+
 # variables 
 TMPDIR=/tmp/libbreak_config
 CONFIGMK=config.mk
@@ -13,13 +18,11 @@ rm -f ${CONFIGMK}
 PDMCR=${TMPDIR}/predefined_macro.h
 touch ${TMPDIR}/foo.h
 cpp -dM ${TMPDIR}/foo.h > ${PDMCR}
-if [[ -n $(cat ${PDMCR} | grep __x86_64__) ]]; then
-    ARCH=x86_64
-elif [[ -n $(cat ${PDMCR} | grep __mips__) ]]; then
+if [[ -n $(cat ${PDMCR} | grep __mips__) ]]; then
     ARCH=mips
 else
-    echo "arch unknown"
-    exit -1
+    ARCH=dummy
+    warning "unsupported arch, compile dummy libbreak"
 fi
 unset PDMCR
 
