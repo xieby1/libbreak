@@ -13,6 +13,10 @@ CONFIGMK=config.mk
 mkdir -p ${TMPDIR}
 rm -f ${CONFIGMK}
 
+# TODO: test the source of submodules: local installation, git, parent project
+# init submodule
+git submodule update
+
 # get current arch
 ## variables
 PDMCR=${TMPDIR}/predefined_macro.h
