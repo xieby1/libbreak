@@ -20,10 +20,6 @@ typedef struct BreakInfo
 {
     MIPSInst inst_buf;
     MIPSInst *inst_addr;
-    /* for branch target */
-    bool delayed_slot;
-    MIPSInst inst_buf2;
-    MIPSInst *inst_addr2;
 } BreakInfo;
 
 /* global variables */
@@ -70,6 +66,7 @@ static inline int64_t imm_value(cs_insn *insn, int i)
 
 int insert_break_next(ucontext_t *ucp)
 {
+    assert(bi.inst_addr == (MIPSInst *)0);
     /* MIPS delayed slot */
     /*
      * +---------------+
@@ -105,11 +102,28 @@ int insert_break_next(ucontext_t *ucp)
                 }
             }
             break;
+            case MIPS_INS_BNEZ:
+            {
+                greg_t rs = greg_value(ucp, insn, 0);
+                int64_t target_pc = imm_value(insn, 1);
+                if (rs != 0)
+                {
+                    npc = target_pc;
+                }
+                else
+                {
+                    npc += 8;
+                }
+            }
+            break;
             default:
-                printf("0x%" PRIx64 ":\t%s\t\t%s\n", insn->address,
-                       insn->mnemonic, insn->op_str);
+                printf("0x%" PRIx64 ":\t", insn->address);
+                for(int i=0; i<insn->size; i++){
+                    printf("%hhx", insn->bytes[i]);
+                }
+                printf("\t%s\t\t%s\n", insn->mnemonic, insn->op_str);
                 assert(0);
-                break;
+            break;
         }
     }
     else
@@ -133,10 +147,10 @@ int insert_break_next(ucontext_t *ucp)
 int remove_break(ADDR a)
 {
     MIPSInst *cp = (MIPSInst *)current_pc(a);
-    if (!hit_a_break_MIPSInst(cp))
-        return -1;
+    assert(hit_a_break_MIPSInst(cp));
 
     *cp = bi.inst_buf;
+    bi.inst_addr = (MIPSInst *)0;
 
     return 0;
 }
